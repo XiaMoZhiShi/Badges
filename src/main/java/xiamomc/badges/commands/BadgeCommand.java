@@ -5,12 +5,16 @@ import org.bukkit.entity.Player;
 import xiamomc.badges.BadgeManager;
 import xiamomc.badges.XiamoBadges;
 import xiamomc.badges.commands.builder.CommandBuilder;
+import xiamomc.badges.messages.strings.CommandString;
+import xiamomc.badges.messages.strings.CommonString;
+import xiamomc.badges.messages.strings.PlayerString;
 import xiamomc.badges.misc.TabCompletions;
 import xiamomc.pluginbase.Annotations.Resolved;
 import xiamomc.pluginbase.Command.ISubCommand;
 import xiamomc.pluginbase.Command.SubCommandHandler;
 import xiamomc.pluginbase.Messages.FormattableMessage;
 
+import javax.swing.*;
 import java.util.List;
 
 public class BadgeCommand extends SubCommandHandler<XiamoBadges>
@@ -28,7 +32,7 @@ public class BadgeCommand extends SubCommandHandler<XiamoBadges>
         subCommands = CommandBuilder.builder()
                 .startNew()
                 .name("use")
-                //.permission("")
+                .permission("xiamomc.badge.use")
                 .onFilter((sender, args) ->
                 {
                     if (!(sender instanceof Player player))
@@ -45,7 +49,7 @@ public class BadgeCommand extends SubCommandHandler<XiamoBadges>
                 {
                     if (!(sender instanceof Player player))
                     {
-                        sender.sendMessage("Illegal sender");
+                        sender.sendMessage(CommandString.notAPlayer().toComponent());
                         return true;
                     }
 
@@ -64,35 +68,35 @@ public class BadgeCommand extends SubCommandHandler<XiamoBadges>
 
                     if (match == null)
                     {
-                        sender.sendMessage("Badge not found");
+                        sender.sendMessage(CommandString.noSuchBadge().toComponent());
                         return true;
                     }
 
                     badgeManager.applyBadge(player.getUniqueId(), match);
-                    sender.sendMessage("Applied '%s'".formatted(match));
+                    sender.sendMessage(CommandString.appliedBadge().resolve("id", match).toComponent());
                     return true;
                 })
 
                 .startNew()
                 .name("unload")
-                //.permission("")
+                .permission("xiamomc.badge.use")
                 .onFilter((sender, args) -> List.of())
                 .executes((sender, args) ->
                 {
                     if (!(sender instanceof Player player))
                     {
-                        sender.sendMessage("Not player");
+                        sender.sendMessage(CommandString.notAPlayer().toComponent());
                         return true;
                     }
 
-                    badgeManager.applyBadge(player.getUniqueId(), null);
-                    sender.sendMessage("Unloaded badge");
+                    badgeManager.removeBadge(player.getUniqueId(), null);
+                    sender.sendMessage(CommandString.unloadedBadge().toComponent());
                     return true;
                 })
 
                 .startNew()
                 .name("revoke")
-                //.permission("")
+                .permission("xiamomc.badge.manage")
                 .onFilter((sender, args) ->
                 {
                     if (args.size() == 1)
@@ -115,7 +119,7 @@ public class BadgeCommand extends SubCommandHandler<XiamoBadges>
                 {
                     if (args.size() < 2)
                     {
-                        sender.sendMessage("Not enough arguments!");
+                        sender.sendMessage(CommandString.notEnoughParameters().toComponent());
                         return true;
                     }
 
@@ -123,26 +127,22 @@ public class BadgeCommand extends SubCommandHandler<XiamoBadges>
                     var badgeId = args.get(1);
 
                     var offlinePlayer = Bukkit.getOfflinePlayer(playerName);
-                    var availableBadges = badgeManager.getAllAvailableBadges();
 
-                    var targetBadge = availableBadges.stream().filter(b -> b.identifier.equalsIgnoreCase(badgeId))
-                            .findFirst().orElse(null);
-                    if (targetBadge == null)
-                    {
-                        sender.sendMessage("Badge not found");
-                        return true;
-                    }
+                    FormattableMessage formattable = badgeManager.revokeBadgeFromPlayer(offlinePlayer, badgeId)
+                            ? CommandString.revokeSuccess()
+                            : CommandString.revokeFail();
 
-                    var data = badgeManager.getPlayerdata(offlinePlayer);
-                    data.unlockedBadges.remove(badgeId);
-                    sender.sendMessage("Success.");
+                    formattable.resolve("who", playerName)
+                            .resolve("id", badgeId);
+
+                    sender.sendMessage(formattable.toComponent());
 
                     return true;
                 })
 
                 .startNew()
                 .name("grant")
-                //.permission("")
+                .permission("xiamomc.badge.manage")
                 .onFilter((sender, args) ->
                 {
                     if (args.size() == 1)
@@ -165,7 +165,7 @@ public class BadgeCommand extends SubCommandHandler<XiamoBadges>
                 {
                     if (args.size() < 2)
                     {
-                        sender.sendMessage("Not enough arguments!");
+                        sender.sendMessage(CommandString.notEnoughParameters().toComponent());
                         return true;
                     }
 
@@ -173,26 +173,24 @@ public class BadgeCommand extends SubCommandHandler<XiamoBadges>
                     var badgeId = args.get(1);
 
                     var offlinePlayer = Bukkit.getOfflinePlayer(playerName);
-                    var availableBadges = badgeManager.getAllAvailableBadges();
 
-                    var targetBadge = availableBadges.stream().filter(b -> b.identifier.equalsIgnoreCase(badgeId))
-                            .findFirst().orElse(null);
-                    if (targetBadge == null)
+                    var result = badgeManager.grantBadgeToPlayer(offlinePlayer, badgeId);
+                    switch (result)
                     {
-                        sender.sendMessage("Badge not found");
-                        return true;
-                    }
-
-                    var data = badgeManager.getPlayerdata(offlinePlayer);
-
-                    if (data.unlockedBadges.contains(badgeId))
-                    {
-                        sender.sendMessage("They already have!");
-                    }
-                    else
-                    {
-                        data.unlockedBadges.add(badgeId);
-                        sender.sendMessage("Success.");
+                        case SUCCESS ->
+                        {
+                            sender.sendMessage(CommandString.grantSuccess()
+                                    .resolve("id", badgeId)
+                                    .resolve("who", playerName)
+                                    .toComponent());
+                        }
+                        case ID_NOT_EXIST -> sender.sendMessage(CommandString.noSuchBadge().toComponent());
+                        case FAIL ->
+                        {
+                            sender.sendMessage(CommandString.grantFailed()
+                                    .resolve("who", playerName)
+                                    .toComponent());
+                        }
                     }
 
                     return true;
@@ -200,7 +198,7 @@ public class BadgeCommand extends SubCommandHandler<XiamoBadges>
 
                 .startNew()
                 .name("set")
-                //.permission("")
+                .permission("xiamomc.badge.manage")
                 .onFilter((sender, args) ->
                 {
                     var input = args.size() > 1 ? args.get(0) : "";
@@ -215,21 +213,90 @@ public class BadgeCommand extends SubCommandHandler<XiamoBadges>
                     var targetIdentifier = !args.isEmpty() ? args.get(0) : null;
                     if (targetIdentifier == null)
                     {
-                        sender.sendMessage("Null identifier!");
+                        sender.sendMessage(CommandString.badgeNotSpecified().toComponent());
                         return true;
                     }
 
                     var display = args.size() >= 2 ? getElementfrom(1, args) : " ~ %s ~ ".formatted(targetIdentifier.toUpperCase());
-                    var badge = badgeManager.getModifiableBadge(targetIdentifier);
+                    var badge = badgeManager.getModifiableBadgeData(targetIdentifier);
                     if (badge == null)
                     {
-                        badgeManager.addBadge(targetIdentifier, display);
-                        sender.sendMessage("Added badge '%s' for display '%s'".formatted(targetIdentifier, display));
+                        badgeManager.registerBadge(targetIdentifier, display);
+
+                        var formattable = CommandString.addBadgeSuccess()
+                                .resolve("id", targetIdentifier)
+                                .resolve("display", display);
+
+                        sender.sendMessage(formattable.toComponent());
                         return true;
                     }
 
                     badge.name = display;
-                    sender.sendMessage("Changed display of '%s' to '%s'".formatted(targetIdentifier, display));
+
+                    var formattable = CommandString.changedBadgeDisplay()
+                            .resolve("id", targetIdentifier)
+                            .resolve("display", display);
+
+                    sender.sendMessage(formattable.toComponent());
+
+                    return true;
+                })
+
+                .startNew()
+                .name("unset")
+                .permission("xiamomc.badge.manage")
+                .onFilter((sender, args) ->
+                {
+                    var input = args.size() > 1 ? args.get(0) : "";
+
+                    return badgeManager.getAllAvailableBadges().stream()
+                            .filter(badge -> badge.identifier.toLowerCase().startsWith(input.toLowerCase()))
+                            .map(b -> b.identifier)
+                            .toList();
+                })
+                .executes((sender, args) ->
+                {
+                    if (args.isEmpty())
+                    {
+                        sender.sendMessage(CommandString.notEnoughParameters().toComponent());
+                        return true;
+                    }
+
+                    var id = args.get(0);
+                    badgeManager.unregisterBadge(id);
+                    sender.sendMessage(CommandString.unsetSuccess().resolve("id", id).toComponent());
+
+                    return true;
+                })
+
+                .startNew()
+                .name("list")
+                .permission("xiamomc.badge.use")
+                .executes((sender, args) ->
+                {
+                    if (args.isEmpty() && !(sender instanceof Player))
+                    {
+                        sender.sendMessage(CommandString.playerNotSpecified().toComponent());
+                        return true;
+                    }
+
+                    var targetPlayerName = args.isEmpty() ? sender.getName() : args.get(0);
+
+                    var player = Bukkit.getOfflinePlayer(targetPlayerName);
+                    var data = badgeManager.getPlayerdata(player);
+
+                    sender.sendMessage(CommandString.unlockedBadgeHeader().resolve("player", targetPlayerName).toComponent());
+                    data.unlockedBadges.forEach(id ->
+                    {
+                        var formattable = CommonString.badgeDisplay();
+
+                        var badge = badgeManager.getModifiableBadgeData(id);
+                        formattable.resolve("id", id)
+                                .resolve("display", badge == null ? "<italic>???</italic>" : badge.name);
+
+                        sender.sendMessage(formattable.toComponent());
+                    });
+
 
                     return true;
                 })
@@ -245,11 +312,7 @@ public class BadgeCommand extends SubCommandHandler<XiamoBadges>
             if (i != index) builder.append(" ");
 
             var string = strList.get(i);
-            if (string.equalsIgnoreCase("!SPACE"))
-                string = " ";
-
-            if (string.equalsIgnoreCase("!NULL"))
-                string = "";
+            string = string.replace("!SPACE", " ").replace("!NULL", "");
 
             builder.append(string);
         }

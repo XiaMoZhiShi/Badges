@@ -1,11 +1,13 @@
 package xiamomc.badges.storage.playerdata;
 
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import xiamomc.badges.storage.BStorage;
 
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -60,5 +62,10 @@ public class PlayerdataStorage extends BStorage<PlayerdataRoot>
     public CompletableFuture<SinglePlayerdata> getDataAsync(UUID uuid)
     {
         return CompletableFuture.supplyAsync(() -> getData(uuid));
+    }
+
+    public List<SinglePlayerdata> getAllModifiableData()
+    {
+        return new ObjectArrayList<>(storingObject.data);
     }
 }

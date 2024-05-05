@@ -19,4 +19,20 @@ public class StoredBadge
         }
         return super.equals(obj);
     }
+
+    public StoredBadge()
+    {
+    }
+
+    public StoredBadge(String name, String id)
+    {
+        this.name = name;
+        this.identifier = id;
+    }
+
+    @Override
+    protected StoredBadge clone()
+    {
+        return new StoredBadge(this.name, this.identifier);
+    }
 }

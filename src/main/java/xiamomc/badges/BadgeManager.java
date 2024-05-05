@@ -1,18 +1,23 @@
 package xiamomc.badges;
 
+import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 import net.luckperms.api.LuckPermsProvider;
 import net.luckperms.api.node.NodeType;
 import net.luckperms.api.node.types.PrefixNode;
+import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
+import xiamomc.badges.messages.strings.PlayerString;
 import xiamomc.badges.storage.badge.BadgeStorage;
 import xiamomc.badges.storage.badge.StoredBadge;
 import xiamomc.badges.storage.playerdata.PlayerdataStorage;
 import xiamomc.badges.storage.playerdata.SinglePlayerdata;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -45,15 +50,39 @@ public class BadgeManager extends BadgePluginObject
         return playerdataStorage.getDataAsync(player.getUniqueId());
     }
 
-    public void applyBadge(UUID uuid, @Nullable String identifier)
+    public void applyBadge(UUID uuid, @NotNull String identifier)
     {
         var playerData = playerdataStorage.getData(uuid);
-        playerData.badgeIdentifier = identifier;
+        playerData.currentBadge = identifier;
 
-        applyToLuckPerms(uuid, identifier);
+        applyBadgeToLuckPerms(uuid, identifier);
     }
 
-    public void applyToLuckPerms(UUID uuid, @Nullable String identifier)
+    /**
+     *
+     * @param uuid 目标玩家的UUID
+     * @param targetId 要移除的前缀，若为null则移除当前前缀
+     */
+    public void removeBadge(UUID uuid, @Nullable String targetId)
+    {
+        var data = playerdataStorage.getData(uuid);
+        if (targetId == null || targetId.equalsIgnoreCase(data.currentBadge))
+            data.currentBadge = null;
+
+        applyBadgeToLuckPerms(uuid, null);
+    }
+
+    public void refreshBadge(Player player)
+    {
+        var dataFuture = getPlayerdataAsync(player);
+
+        dataFuture.thenAccept(data ->
+        {
+            applyBadgeToLuckPerms(player.getUniqueId(), data.currentBadge);
+        });
+    }
+
+    private void applyBadgeToLuckPerms(UUID uuid, @Nullable String identifier)
     {
         logger.info("UUId is " + uuid + " :: id is " + identifier);
         var userManager = LuckPermsProvider.get().getUserManager();
@@ -88,29 +117,114 @@ public class BadgeManager extends BadgePluginObject
         });
     }
 
-    @Nullable
-    public StoredBadge getModifiableBadge(String identifier)
-    {
-        return badgeStorage.getStored(identifier);
-    }
-
     /**
      *
      * @param identifier
      * @param display
      * @return 操作是否成功
      */
-    public boolean addBadge(@NotNull String identifier, @NotNull String display)
+    public boolean registerBadge(@NotNull String identifier, @NotNull String display)
     {
+        identifier = identifier.toLowerCase();
+
         if (badgeStorage.getStored(identifier) != null) return false;
 
         badgeStorage.add(identifier, display);
         return true;
     }
 
+    public boolean unregisterBadge(@NotNull String identifier)
+    {
+        identifier = identifier.toLowerCase();
+
+        var badge = badgeStorage.getStored(identifier);
+        if (badge == null) return true;
+
+        badgeStorage.remove(identifier);
+
+        // 解除所有正装备此前缀的玩家的前缀
+        String idFinal = identifier;
+        CompletableFuture.runAsync(() ->
+        {
+            Map<OfflinePlayer, String> players = new Object2ObjectArrayMap<>();
+
+            playerdataStorage.getAllModifiableData()
+                    .forEach(data ->
+                    {
+                        if (data.unlockedBadges.contains(idFinal))
+                            players.put(Bukkit.getOfflinePlayer(data.uuid), idFinal);
+                    });
+
+            this.addSchedule(() -> players.forEach((p, id) -> this.removeBadge(p.getUniqueId(), id)));
+        });
+        return true;
+    }
+
+    public enum GrantResult
+    {
+        SUCCESS,
+        FAIL,
+        ID_NOT_EXIST
+    }
+
+    /**
+     *
+     * @param offline
+     * @param badgeIdentifier
+     * @return Whether this operation was successful
+     */
+    public GrantResult grantBadgeToPlayer(OfflinePlayer offline, String badgeIdentifier)
+    {
+        badgeIdentifier = badgeIdentifier.toLowerCase();
+
+        if (!badgeStorage.contains(badgeIdentifier))
+            return GrantResult.ID_NOT_EXIST;
+
+        var data = playerdataStorage.getData(offline.getUniqueId());
+        if (data.unlockedBadges.contains(badgeIdentifier))
+            return GrantResult.SUCCESS;
+
+        data.unlockedBadges.add(badgeIdentifier);
+
+        var player = offline.getPlayer();
+        if (player != null)
+        {
+            player.sendMessage(PlayerString.unlockedBadgeNotify().toComponent());
+
+            var formattable = PlayerString.unlockedBadgeDisplay();
+            var badge = getModifiableBadgeData(badgeIdentifier);
+
+            formattable.resolve("display", badge == null ? "<italic>???</italic>" : badge.name);
+
+            player.sendMessage(formattable.toComponent());
+            player.sendMessage(PlayerString.unlockedBadgeUsage()
+                    .resolve("command", "/badge use %s".formatted(badgeIdentifier))
+                    .toComponent());
+        }
+
+        return GrantResult.SUCCESS;
+    }
+
+    public boolean revokeBadgeFromPlayer(OfflinePlayer player, String badgeIdentifier)
+    {
+        badgeIdentifier = badgeIdentifier.toLowerCase();
+
+        var data = playerdataStorage.getData(player.getUniqueId());
+        data.unlockedBadges.remove(badgeIdentifier);
+
+        return true;
+    }
+
+    @Nullable
+    public StoredBadge getModifiableBadgeData(String identifier)
+    {
+        return badgeStorage.getStored(identifier);
+    }
+
+    @Unmodifiable
     public List<StoredBadge> getAllAvailableBadges()
     {
-        return badgeStorage.getAllStored();
+        return badgeStorage.getAllStoredCopy();
     }
 
     public void saveConfigurations()

@@ -12,24 +12,13 @@ import xiamomc.pluginbase.Command.CommandHelper;
 
 public class BadgeEventListener extends BadgePluginObject implements Listener
 {
-    @Resolved(shouldSolveImmediately = true, allowNull = false)
+    @Resolved(shouldSolveImmediately = true)
     private BadgeManager badgeManager;
-
-    @Initializer
-    private void load()
-    {
-        logger.warn("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
-    }
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent e)
     {
-        var dataFuture = badgeManager.getPlayerdataAsync(e.getPlayer());
-
-        dataFuture.thenAccept(data ->
-        {
-            badgeManager.applyToLuckPerms(e.getPlayer().getUniqueId(), data.badgeIdentifier);
-        });
+        badgeManager.refreshBadge(e.getPlayer());
     }
 
     @Resolved
