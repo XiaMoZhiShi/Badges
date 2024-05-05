@@ -215,6 +215,11 @@ public class BadgeManager extends BadgePluginObject
         return true;
     }
 
+    public void invokeSaveBadgeConfiguration()
+    {
+        badgeStorage.saveConfiguration();
+    }
+
     @Nullable
     public StoredBadge getModifiableBadgeData(String identifier)
     {

@@ -232,6 +232,7 @@ public class BadgeCommand extends SubCommandHandler<XiamoBadges>
                     }
 
                     badge.name = display;
+                    badgeManager.invokeSaveBadgeConfiguration();
 
                     var formattable = CommandString.changedBadgeDisplay()
                             .resolve("id", targetIdentifier)
