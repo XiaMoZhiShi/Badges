@@ -152,7 +152,10 @@ public class BadgeManager extends BadgePluginObject
                     .forEach(data ->
                     {
                         if (data.unlockedBadges.contains(idFinal))
+                        {
                             players.put(Bukkit.getOfflinePlayer(data.uuid), idFinal);
+                            data.unlockedBadges.remove(idFinal);
+                        }
                     });
 
             this.addSchedule(() -> players.forEach((p, id) -> this.removeBadge(p.getUniqueId(), id)));
