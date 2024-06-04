@@ -2,6 +2,7 @@ package xiamomc.badges;
 
 import org.bukkit.Bukkit;
 import xiamomc.badges.commands.BadgeCommandHelper;
+import xiamomc.badges.config.BadgeConfigManager;
 import xiamomc.badges.events.BadgeEventListener;
 import xiamomc.badges.messages.BadgeMessageStore;
 import xiamomc.pluginbase.Command.CommandHelper;
@@ -43,6 +44,7 @@ public final class XiamoBadges extends XiaMoJavaPlugin
         // Plugin startup logic
         dependencyManager.cache(badgeManager = new BadgeManager());
         dependencyManager.cacheAs(MessageStore.class, new BadgeMessageStore());
+        dependencyManager.cache(new BadgeConfigManager(this));
 
         dependencyManager.cacheAs(CommandHelper.class, new BadgeCommandHelper());
 
