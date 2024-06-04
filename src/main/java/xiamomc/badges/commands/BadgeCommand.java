@@ -1,6 +1,7 @@
 package xiamomc.badges.commands;
 
 import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 import xiamomc.badges.BadgeManager;
 import xiamomc.badges.XiamoBadges;
@@ -107,10 +108,11 @@ public class BadgeCommand extends SubCommandHandler<XiamoBadges>
                     else if (args.size() == 2)
                     {
                         var input = args.get(1);
+                        var offline = Bukkit.getOfflinePlayer(args.get(0));
+                        var data = badgeManager.getPlayerdata(offline);
 
-                        return badgeManager.getAllAvailableBadges().stream()
-                                .filter(badge -> badge.identifier.toLowerCase().startsWith(input.toLowerCase()))
-                                .map(b -> b.identifier)
+                        return data.unlockedBadges.stream()
+                                .filter(id -> id.toLowerCase().startsWith(input.toLowerCase()))
                                 .toList();
                     }
 
