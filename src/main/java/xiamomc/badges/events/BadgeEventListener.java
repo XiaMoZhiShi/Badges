@@ -20,16 +20,4 @@ public class BadgeEventListener extends BadgePluginObject implements Listener
     {
         badgeManager.refreshBadge(e.getPlayer());
     }
-
-    @Resolved
-    private CommandHelper<?> helper;
-
-    @EventHandler
-    public void onTabComplete(TabCompleteEvent e)
-    {
-        if (e.isCancelled()) return;
-
-        var result = helper.onTabComplete(e.getBuffer(), e.getSender());
-        if (result != null) e.setCompletions(result);
-    }
 }
