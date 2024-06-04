@@ -9,6 +9,7 @@ import xiamomc.badges.messages.strings.CommandString;
 import xiamomc.badges.messages.strings.CommonString;
 import xiamomc.badges.messages.strings.PlayerString;
 import xiamomc.badges.misc.TabCompletions;
+import xiamomc.badges.utilties.MessageUtils;
 import xiamomc.pluginbase.Annotations.Resolved;
 import xiamomc.pluginbase.Command.ISubCommand;
 import xiamomc.pluginbase.Command.SubCommandHandler;
@@ -49,7 +50,7 @@ public class BadgeCommand extends SubCommandHandler<XiamoBadges>
                 {
                     if (!(sender instanceof Player player))
                     {
-                        sender.sendMessage(CommandString.notAPlayer().toComponent());
+                        sender.sendMessage(MessageUtils.prefixes(sender, CommandString.notAPlayer()));
                         return true;
                     }
 
@@ -68,12 +69,12 @@ public class BadgeCommand extends SubCommandHandler<XiamoBadges>
 
                     if (match == null)
                     {
-                        sender.sendMessage(CommandString.noSuchBadge().toComponent());
+                        sender.sendMessage(MessageUtils.prefixes(sender, CommandString.noSuchBadge()));
                         return true;
                     }
 
                     badgeManager.applyBadge(player.getUniqueId(), match);
-                    sender.sendMessage(CommandString.appliedBadge().resolve("id", match).toComponent());
+                    sender.sendMessage(MessageUtils.prefixes(sender, CommandString.appliedBadge().resolve("id", match)));
                     return true;
                 })
 
@@ -85,12 +86,12 @@ public class BadgeCommand extends SubCommandHandler<XiamoBadges>
                 {
                     if (!(sender instanceof Player player))
                     {
-                        sender.sendMessage(CommandString.notAPlayer().toComponent());
+                        sender.sendMessage(MessageUtils.prefixes(sender, CommandString.notAPlayer()));
                         return true;
                     }
 
                     badgeManager.removeBadge(player.getUniqueId(), null);
-                    sender.sendMessage(CommandString.unloadedBadge().toComponent());
+                    sender.sendMessage(MessageUtils.prefixes(sender, CommandString.unloadedBadge()));
                     return true;
                 })
 
@@ -119,7 +120,7 @@ public class BadgeCommand extends SubCommandHandler<XiamoBadges>
                 {
                     if (args.size() < 2)
                     {
-                        sender.sendMessage(CommandString.notEnoughParameters().toComponent());
+                        sender.sendMessage(MessageUtils.prefixes(sender, CommandString.notEnoughParameters()));
                         return true;
                     }
 
@@ -135,7 +136,7 @@ public class BadgeCommand extends SubCommandHandler<XiamoBadges>
                     formattable.resolve("who", playerName)
                             .resolve("id", badgeId);
 
-                    sender.sendMessage(formattable.toComponent());
+                    sender.sendMessage(MessageUtils.prefixes(sender, formattable));
 
                     return true;
                 })
@@ -165,7 +166,7 @@ public class BadgeCommand extends SubCommandHandler<XiamoBadges>
                 {
                     if (args.size() < 2)
                     {
-                        sender.sendMessage(CommandString.notEnoughParameters().toComponent());
+                        sender.sendMessage(MessageUtils.prefixes(sender, CommandString.notEnoughParameters()));
                         return true;
                     }
 
@@ -179,17 +180,19 @@ public class BadgeCommand extends SubCommandHandler<XiamoBadges>
                     {
                         case SUCCESS ->
                         {
-                            sender.sendMessage(CommandString.grantSuccess()
+                            var message = CommandString.grantSuccess()
                                     .resolve("id", badgeId)
-                                    .resolve("who", playerName)
-                                    .toComponent());
+                                    .resolve("who", playerName);
+
+                            sender.sendMessage(MessageUtils.prefixes(sender, message));
                         }
-                        case ID_NOT_EXIST -> sender.sendMessage(CommandString.noSuchBadge().toComponent());
+                        case ID_NOT_EXIST -> sender.sendMessage(MessageUtils.prefixes(sender, CommandString.noSuchBadge()));
                         case FAIL ->
                         {
-                            sender.sendMessage(CommandString.grantFailed()
-                                    .resolve("who", playerName)
-                                    .toComponent());
+                            var message = CommandString.grantFailed()
+                                    .resolve("who", playerName);
+
+                            sender.sendMessage(MessageUtils.prefixes(sender, message));
                         }
                     }
 
@@ -213,7 +216,7 @@ public class BadgeCommand extends SubCommandHandler<XiamoBadges>
                     var targetIdentifier = !args.isEmpty() ? args.get(0) : null;
                     if (targetIdentifier == null)
                     {
-                        sender.sendMessage(CommandString.badgeNotSpecified().toComponent());
+                        sender.sendMessage(MessageUtils.prefixes(sender, CommandString.badgeNotSpecified()));
                         return true;
                     }
 
@@ -227,7 +230,7 @@ public class BadgeCommand extends SubCommandHandler<XiamoBadges>
                                 .resolve("id", targetIdentifier)
                                 .resolve("display", display);
 
-                        sender.sendMessage(formattable.toComponent());
+                        sender.sendMessage(MessageUtils.prefixes(sender, formattable));
                         return true;
                     }
 
@@ -238,7 +241,7 @@ public class BadgeCommand extends SubCommandHandler<XiamoBadges>
                             .resolve("id", targetIdentifier)
                             .resolve("display", display);
 
-                    sender.sendMessage(formattable.toComponent());
+                    sender.sendMessage(MessageUtils.prefixes(sender, formattable));
 
                     return true;
                 })
@@ -259,13 +262,13 @@ public class BadgeCommand extends SubCommandHandler<XiamoBadges>
                 {
                     if (args.isEmpty())
                     {
-                        sender.sendMessage(CommandString.notEnoughParameters().toComponent());
+                        sender.sendMessage(MessageUtils.prefixes(sender, CommandString.badgeNotSpecified()));
                         return true;
                     }
 
                     var id = args.get(0);
                     badgeManager.unregisterBadge(id);
-                    sender.sendMessage(CommandString.unsetSuccess().resolve("id", id).toComponent());
+                    sender.sendMessage(MessageUtils.prefixes(sender, CommandString.unsetSuccess().resolve("id", id)));
 
                     return true;
                 })
@@ -277,7 +280,7 @@ public class BadgeCommand extends SubCommandHandler<XiamoBadges>
                 {
                     if (args.isEmpty() && !(sender instanceof Player))
                     {
-                        sender.sendMessage(CommandString.playerNotSpecified().toComponent());
+                        sender.sendMessage(MessageUtils.prefixes(sender, CommandString.playerNotSpecified()));
                         return true;
                     }
 
@@ -286,7 +289,8 @@ public class BadgeCommand extends SubCommandHandler<XiamoBadges>
                     var player = Bukkit.getOfflinePlayer(targetPlayerName);
                     var data = badgeManager.getPlayerdata(player);
 
-                    sender.sendMessage(CommandString.unlockedBadgeHeader().resolve("player", targetPlayerName).toComponent());
+                    var message = CommandString.unlockedBadgeHeader().resolve("player", targetPlayerName);
+                    sender.sendMessage(MessageUtils.prefixes(sender, message));
                     data.unlockedBadges.forEach(id ->
                     {
                         var formattable = CommonString.badgeDisplay();
@@ -295,7 +299,7 @@ public class BadgeCommand extends SubCommandHandler<XiamoBadges>
                         formattable.resolve("id", id)
                                 .resolve("display", badge == null ? "<italic>???</italic>" : badge.name);
 
-                        sender.sendMessage(formattable.toComponent());
+                        sender.sendMessage(MessageUtils.prefixes(sender, formattable));
                     });
 
 

@@ -15,6 +15,7 @@ import xiamomc.badges.storage.badge.BadgeStorage;
 import xiamomc.badges.storage.badge.StoredBadge;
 import xiamomc.badges.storage.playerdata.PlayerdataStorage;
 import xiamomc.badges.storage.playerdata.SinglePlayerdata;
+import xiamomc.badges.utilties.MessageUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -192,17 +193,16 @@ public class BadgeManager extends BadgePluginObject
         var player = offline.getPlayer();
         if (player != null)
         {
-            player.sendMessage(PlayerString.unlockedBadgeNotify().toComponent());
-
-            var formattable = PlayerString.unlockedBadgeDisplay();
             var badge = getModifiableBadgeData(badgeIdentifier);
+            var message = PlayerString.unlockedBadgeNotify()
+                    .resolve("display", badge == null ? "<italic>???</italic>" : badge.name);
 
-            formattable.resolve("display", badge == null ? "<italic>???</italic>" : badge.name);
+            player.sendMessage(MessageUtils.prefixes(player, message));
 
-            player.sendMessage(formattable.toComponent());
-            player.sendMessage(PlayerString.unlockedBadgeUsage()
-                    .resolve("command", "/badge use %s".formatted(badgeIdentifier))
-                    .toComponent());
+            var usage = PlayerString.unlockedBadgeUsage()
+                    .resolve("command", "/badge use %s".formatted(badgeIdentifier));
+
+            player.sendMessage(MessageUtils.prefixes(player, usage));
         }
 
         return GrantResult.SUCCESS;
