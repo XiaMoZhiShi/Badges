@@ -33,20 +33,25 @@ public class PlayerdataStorage extends BStorage<PlayerdataRoot>
     @NotNull
     public synchronized SinglePlayerdata getData(UUID uuid)
     {
-        var data = storingObject.data
-                .stream()
-                .filter(d -> uuid.equals(d.uuid))
-                .findFirst()
-                .orElse(null);
+        var storing = this.storingObject;
 
-        if (data != null) return data;
+        synchronized (storing)
+        {
+            var data = storing.data
+                    .stream()
+                    .filter(d -> uuid.equals(d.uuid))
+                    .findFirst()
+                    .orElse(null);
 
-        var newData = new SinglePlayerdata();
-        newData.uuid = uuid;
+            if (data != null) return data;
 
-        storingObject.data.add(newData);
+            var newData = new SinglePlayerdata();
+            newData.uuid = uuid;
 
-        return newData;
+            storing.data.add(newData);
+
+            return newData;
+        }
     }
 
     public SinglePlayerdata getData(OfflinePlayer offlinePlayer)
@@ -66,6 +71,11 @@ public class PlayerdataStorage extends BStorage<PlayerdataRoot>
 
     public List<SinglePlayerdata> getAllModifiableData()
     {
-        return new ObjectArrayList<>(storingObject.data);
+        var storing = this.storingObject;
+
+        synchronized (storing)
+        {
+            return new ObjectArrayList<>(storing.data);
+        }
     }
 }

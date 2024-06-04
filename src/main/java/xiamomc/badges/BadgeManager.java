@@ -185,10 +185,14 @@ public class BadgeManager extends BadgePluginObject
             return GrantResult.ID_NOT_EXIST;
 
         var data = playerdataStorage.getData(offline.getUniqueId());
-        if (data.unlockedBadges.contains(badgeIdentifier))
-            return GrantResult.SUCCESS;
 
-        data.unlockedBadges.add(badgeIdentifier);
+        synchronized (data)
+        {
+            if (data.unlockedBadges.contains(badgeIdentifier))
+                return GrantResult.SUCCESS;
+
+            data.unlockedBadges.add(badgeIdentifier);
+        }
 
         var player = offline.getPlayer();
         if (player != null)
@@ -213,7 +217,19 @@ public class BadgeManager extends BadgePluginObject
         badgeIdentifier = badgeIdentifier.toLowerCase();
 
         var data = playerdataStorage.getData(player.getUniqueId());
-        data.unlockedBadges.remove(badgeIdentifier);
+
+        synchronized (data)
+        {
+            data.unlockedBadges.remove(badgeIdentifier);
+
+            // 如果当前正在佩戴，那么取消佩戴此Badge
+            if (badgeIdentifier.equals(data.currentBadge))
+            {
+                data.currentBadge = null;
+                removeBadge(player.getUniqueId(), badgeIdentifier);
+            }
+
+        }
 
         return true;
     }
